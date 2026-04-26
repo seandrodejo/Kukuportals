@@ -17,9 +17,9 @@ import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 /**
- * KUKU PORTALS - MASTER DEPLOYMENT (V18.5)
+ * KUKU PORTALS - MASTER DEPLOYMENT (V18.6)
  * Operator: Sean
- * Patch: Mobile Responsiveness & Modal Overflow Protection (Zero Removals)
+ * Patch: Desktop Marquee Spacing Fix & Mobile Omnipresence (Zero Removals)
  */
 
 const LinkedInIcon = ({ size = 24 }: { size?: number }) => (
@@ -83,7 +83,8 @@ const CodeMeteoriteRain = () => {
 };
 
 const InfiniteMarquee = () => (
-  <div className="w-full overflow-hidden bg-[#FF1B1B] py-3 flex border-y border-white/20 relative z-20">
+  // ADDED: mt-10 md:mt-20 to separate the ticker from the buttons on desktop while preserving mobile
+  <div className="w-full overflow-hidden bg-[#FF1B1B] py-3 flex border-y border-white/20 relative z-20 mt-10 md:mt-20">
     <div className="flex w-max" style={{ animation: 'marquee 25s linear infinite' }}>
       {[...Array(4)].map((_, i) => (
         <div key={i} className="flex gap-12 md:gap-16 items-center px-4 md:px-8 text-black font-black uppercase tracking-[0.2em] md:tracking-[0.3em] text-xs md:text-sm cyberpunk-title shrink-0">
@@ -234,7 +235,7 @@ export default function KukuPortalsFinal() {
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1 }} className="max-w-[1600px] w-full space-y-12 md:space-y-16 relative">
           
           <div className="absolute top-0 left-10 text-[10px] font-mono text-[#FF1B1B] text-left hidden lg:block opacity-50">
-             SYS.V18.5 <br/> UPTIME: 99.9% <br/> SECURE UPLINK
+             SYS.V18.6 <br/> UPTIME: 99.9% <br/> SECURE UPLINK
           </div>
           <div className="absolute bottom-0 right-10 text-[10px] font-mono text-white/30 text-right hidden lg:block">
              LATENCY: 0.4ms <br/> NODE: ACTIVE
