@@ -13,7 +13,7 @@ import {
   CreditCard,
   FileText,
   BadgeDollarSign,
-  Loader2 // ADDED: For the loading state
+  Loader2 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
@@ -23,9 +23,9 @@ import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 /**
- * KUKU PORTALS - DESIGN BRIEF PORTAL (V2.6)
+ * KUKU PORTALS - DESIGN BRIEF PORTAL (V2.7)
  * Operator: Sean
- * Patch: Database Sync Protection & Mobile Omnipresence (Zero Removals)
+ * Patch: Client Identity Linkage (Zero Removals)
  */
 
 const InternalStyles = () => (
@@ -64,27 +64,38 @@ const CodeMeteoriteRain = () => {
 
 export default function DesignBrief() {
   const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false); // ADDED: Submission lock
+  const [isSubmitting, setIsSubmitting] = useState(false); 
+  const [clientIdentity, setClientIdentity] = useState({ name: 'Unknown Client', email: '' });
+
   const [formData, setFormData] = useState({
     aesthetic: '',
     tier: 'Subdomain ($800)',
     goals: ''
   });
 
+  // IDENTITY EXTRACTION: Pull client data from browser memory upon loading
+  useEffect(() => {
+    const storedName = localStorage.getItem('kuku_client_name');
+    const storedEmail = localStorage.getItem('kuku_client_email');
+    if (storedName && storedEmail) {
+      setClientIdentity({ name: storedName, email: storedEmail });
+    }
+  }, []);
+
   const handleBriefSubmission = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true); // Lock the terminal so user doesn't double-click
+    setIsSubmitting(true); 
     try {
       await addDoc(collection(db, "briefing_logs"), {
         ...formData,
+        name: clientIdentity.name,   // IDENTITY ATTACHED
+        email: clientIdentity.email, // IDENTITY ATTACHED
         timestamp: serverTimestamp(),
         status: "Payment Pending"
       });
 
-      // ADDED: A micro-delay to ensure Firebase completes the network flush before navigating away
       await new Promise(resolve => setTimeout(resolve, 600)); 
 
-      // DYNAMIC CONTRA LINKAGE
       if (formData.tier.includes('800')) {
         window.location.href = "https://contra.com/s/clZEqOOQ-strategic-subdomain-funnel-architecture";
       } else {
@@ -92,7 +103,7 @@ export default function DesignBrief() {
       }
     } catch (err) {
       console.error("Submission Error:", err);
-      setIsSubmitting(false); // Only unlock if it fails
+      setIsSubmitting(false); 
     }
   };
 

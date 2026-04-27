@@ -10,8 +10,7 @@ import {
   deleteDoc, 
   doc, 
   query, 
-  orderBy, 
-  Timestamp 
+  orderBy 
 } from 'firebase/firestore';
 import { 
   Trash2, 
@@ -23,22 +22,28 @@ import {
   User, 
   Mail, 
   MessageSquare,
-  Clock
+  Clock,
+  FileText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 /**
- * KUKU PORTALS - ADMIN COMMAND CENTER (V1.0)
+ * KUKU PORTALS - ADMIN COMMAND CENTER (V1.4)
  * Lead Operator: Sean
- * Protocol: Real-time Lead Decryption & Management
+ * Protocol: Real-time Identity Extraction
  */
 
 interface Lead {
   id: string;
-  name: string;
-  email: string;
-  intent: string;
-  timestamp: Timestamp;
+  type: 'Initial Lead' | 'Design Brief';
+  timestamp: Date; 
+  name?: string;
+  email?: string;
+  intent?: string;
+  aesthetic?: string;
+  tier?: string;
+  goals?: string;
+  status?: string;
 }
 
 const AdminStyles = () => (
@@ -72,13 +77,36 @@ export default function AdminPortal() {
   const fetchLeads = async () => {
     setIsRefreshing(true);
     try {
-      const q = query(collection(db, "funnel_leads"), orderBy("timestamp", "desc"));
-      const querySnapshot = await getDocs(q);
-      const data = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Lead[];
-      setLeads(data);
+      const [leadsSnap, briefsSnap] = await Promise.all([
+        getDocs(query(collection(db, "funnel_leads"), orderBy("timestamp", "desc"))),
+        getDocs(query(collection(db, "briefing_logs"), orderBy("timestamp", "desc")))
+      ]);
+
+      const leadsData = leadsSnap.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          type: 'Initial Lead',
+          ...data,
+          timestamp: data.timestamp?.toDate() || new Date()
+        };
+      });
+
+      const briefsData = briefsSnap.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          type: 'Design Brief',
+          ...data,
+          timestamp: data.timestamp?.toDate() || new Date()
+        };
+      });
+
+      const combinedData = [...leadsData, ...briefsData].sort((a, b) => {
+        return b.timestamp.getTime() - a.timestamp.getTime();
+      });
+
+      setLeads(combinedData as Lead[]);
     } catch (error) {
       console.error("Access Denied / Firebase Error:", error);
     } finally {
@@ -87,10 +115,11 @@ export default function AdminPortal() {
     }
   };
 
-  const deleteLead = async (id: string) => {
-    if (!confirm("Confirm Deletion of Lead Asset?")) return;
+  const deleteLead = async (id: string, type: string) => {
+    if (!confirm("Confirm Deletion of Asset?")) return;
     try {
-      await deleteDoc(doc(db, "funnel_leads", id));
+      const collectionName = type === 'Design Brief' ? "briefing_logs" : "funnel_leads";
+      await deleteDoc(doc(db, collectionName, id));
       setLeads(leads.filter(lead => lead.id !== id));
     } catch (error) {
       alert("Encryption Error: Could not delete.");
@@ -149,7 +178,7 @@ export default function AdminPortal() {
         </div>
         <div className="glass-card p-8 rounded-3xl">
           <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-4">System Node</p>
-          <h3 className="text-2xl font-black italic text-white uppercase tracking-tighter">Firestore-V1</h3>
+          <h3 className="text-2xl font-black italic text-white uppercase tracking-tighter">Firestore-V1.4</h3>
         </div>
       </section>
 
@@ -176,33 +205,65 @@ export default function AdminPortal() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="hover:bg-white/[0.02] transition-colors"
+                        className={`transition-colors ${lead.type === 'Design Brief' ? 'bg-white/[0.04] hover:bg-white/[0.06]' : 'hover:bg-white/[0.02]'}`}
                       >
                         <td className="p-6 whitespace-nowrap">
                           <div className="flex items-center gap-3 text-white/60 text-xs font-bold">
-                            <Clock size={12} className="text-[#FF1B1B]" />
-                            {lead.timestamp?.toDate().toLocaleDateString()}
+                            <Clock size={12} className={lead.type === 'Design Brief' ? 'text-[#00d3ff]' : 'text-[#FF1B1B]'} />
+                            {lead.timestamp.toLocaleDateString()}
                           </div>
                         </td>
+                        
+                        {/* CONDITIONAL SIGNATURE RENDER: Now shows the actual client's name from Local Storage */}
                         <td className="p-6">
                           <div className="text-white font-black text-sm uppercase tracking-tight flex items-center gap-2">
-                            <User size={14} className="opacity-30" /> {lead.name}
+                            {lead.type === 'Design Brief' ? (
+                              <><FileText size={14} className="opacity-80 text-[#00d3ff]" /> {lead.name || "AUTHORIZED BRIEF"}</>
+                            ) : (
+                              <><User size={14} className="opacity-30" /> {lead.name}</>
+                            )}
                           </div>
                         </td>
+
+                        {/* CONDITIONAL UPLINK RENDER: Now shows the Tier AND the Client's Email */}
                         <td className="p-6">
-                          <a href={`mailto:${lead.email}`} className="text-[#FF1B1B] font-bold text-sm hover:underline flex items-center gap-2">
-                            <Mail size={14} className="opacity-30 text-white" /> {lead.email}
-                          </a>
+                          {lead.type === 'Design Brief' ? (
+                            <div className="flex flex-col gap-2">
+                              <span className="text-white/80 font-bold text-[10px] uppercase tracking-widest flex items-center gap-2 border border-white/10 px-3 py-1 rounded-full bg-white/5 w-fit">
+                                <Database size={12} className="opacity-50 text-white" /> {lead.tier}
+                              </span>
+                              {lead.email && (
+                                <a href={`mailto:${lead.email}`} className="text-[#00d3ff] font-bold text-xs hover:underline flex items-center gap-2">
+                                  <Mail size={12} className="opacity-50" /> {lead.email}
+                                </a>
+                              )}
+                            </div>
+                          ) : (
+                            <a href={`mailto:${lead.email}`} className="text-[#FF1B1B] font-bold text-sm hover:underline flex items-center gap-2">
+                              <Mail size={14} className="opacity-30 text-white" /> {lead.email}
+                            </a>
+                          )}
                         </td>
+
+                        {/* CONDITIONAL INTENT RENDER */}
                         <td className="p-6 min-w-[300px]">
                           <div className="text-white/40 text-sm leading-relaxed max-h-20 overflow-y-auto pr-4">
-                            "{lead.intent}"
+                            {lead.type === 'Design Brief' ? (
+                              <div className="space-y-1">
+                                <span className="text-[#00d3ff] font-bold text-[10px] uppercase tracking-widest block">Vibe: {lead.aesthetic}</span>
+                                <span className="block text-white/60">"{lead.goals}"</span>
+                              </div>
+                            ) : (
+                              `"${lead.intent}"`
+                            )}
                           </div>
                         </td>
+
+                        {/* ACTIONS */}
                         <td className="p-6">
                           <div className="flex justify-center items-center gap-4">
                             <button 
-                              onClick={() => deleteLead(lead.id)}
+                              onClick={() => deleteLead(lead.id, lead.type)}
                               className="p-3 bg-white/5 border border-white/10 rounded-xl text-white/30 hover:text-[#FF1B1B] hover:border-[#FF1B1B]/40 hover:bg-[#FF1B1B]/5 transition-all"
                             >
                               <Trash2 size={18} />
